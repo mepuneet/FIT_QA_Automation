@@ -20,7 +20,9 @@ class ContextRunner:
         self._extract_qfactor_data()
         self._extract_forwordlook_data()
         self._extract_select_methodology_data()
-        self._extract_reports()
+        # self._extract_reports()
+        self._extract_in_single_file()
+
 
 
         self.driver.quit()
@@ -48,6 +50,9 @@ class ContextRunner:
 
     def _extract_reports(self):
         self.strategy.extract_reports(const.ALL_SELECT_METHOD_FILES)
+
+    def _extract_in_single_file(self):
+        self.strategy.extract_in_single_file()
 
 if __name__ == "__main__":
     # TODO make folder if not exists

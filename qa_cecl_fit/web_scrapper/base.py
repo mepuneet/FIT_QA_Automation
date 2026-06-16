@@ -4,35 +4,52 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException
 from bs4 import BeautifulSoup
-
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font, Alignment
 from utils import write_file
+from openpyxl.utils import get_column_letter
 import pandas as pd
+import os
 
 class CommonUtils:
 
     def save_element(self,element,file_name,screen_shot=True,extract_df=False):
-        if screen_shot:
-            try:
-                element.screenshot(f'{self.screenshots_path}{file_name}.png')
-                self.add_delay(0.5)
-            except Exception as e:
-                print(f"Unable to take screenshot for {file_name}\n error :{str(e)[:100]}...")
-        
-        table_html = element.get_attribute('outerHTML')
-        text_file = self._generate_file_from_table(table_html)
-        if not text_file:
-            print(f"No data found for {self.file_path}{file_name}")
 
-        if text_file:
-            write_file(f"{self.file_path}{file_name}",text_file)
-            print(f"Extracted: {self.file_path}{file_name}")
+        try:
+            table_html = element.get_attribute('outerHTML')        
+            df = pd.read_html(table_html)[0]
+            full_path = os.path.join(self.file_path, file_name)
 
-        if extract_df:
-            df = pd.read_html(table_html,header=None, keep_default_na=False,thousands='')
-            if df:
-                # df[0].to_csv(f"{self.file_path}df-{file_name}",sep='\t', encoding='utf-8', header='true',index=False)
-                 df.to_csv(f"{self.file_path}/df-{file_name}.txt", sep='\t', encoding='utf-8', header=True, index=False)
+            with pd.ExcelWriter(full_path, engine="openpyxl") as writer:
+                df.to_excel(writer,sheet_name="Data",merge_cells=True)
 
+            # Format Excel
+            wb = load_workbook(full_path)
+            ws = wb["Data"]
+            ws.delete_cols(1)
+
+            # Determine number of header rows
+            header_rows = df.columns.nlevels   # +1 because pandas writes index header
+
+            # Make header rows bold and centered
+            for row in ws.iter_rows(min_row=1, max_row=header_rows):
+                for cell in row:
+                    cell.font = Font(bold=True)
+                    cell.alignment = Alignment(horizontal="center",vertical="center",wrap_text=True)
+            # Auto-fit column widths
+            for col_num, column_cells in enumerate(ws.columns, 1):
+                max_length = 0
+                for cell in column_cells:
+                    if cell.value:
+                        max_length = max(max_length, len(str(cell.value)))
+
+                ws.column_dimensions[get_column_letter(col_num)].width = max_length + 2
+            # Freeze header rows
+            ws.freeze_panes = f"A{header_rows + 1}"
+            wb.save(full_path)
+            print(f"Extracted and formatted: {full_path}")
+        except Exception as e:
+            print(f"Error while extracting adjustment data: {e}")
 
     def extract_data_by_id(self,table_id,report_name='',keep_screenshot=True,extract_as_df=False):
         self.add_delay(10)
@@ -49,56 +66,23 @@ class CommonUtils:
         self.save_element(element,report_name,keep_screenshot,extract_as_df)
 
 
-    # def open_webpage(self,url,web_id=None):
-    #     self.driver.get(url)
-    #     try:
-    #         WebDriverWait(self.driver,5).until(EC.presence_of_element_located((By.ID, "dynamic_breadcrumb")))
-    #     except Exception as e:
-    #         pass
-
-    #     if web_id:
-    #         try:
-    #             WebDriverWait(self.driver,15).until(EC.presence_of_element_located((By.ID, web_id)))
-    #         except Exception as e:
-    #             print(f"Web open Error {e}")
-
-    #     else:
-    #         self.add_delay(5)
-    #     self.add_delay(3)
-    #     print("-"*100)
-    #     print(f"Web-page opened: {url}")
-
-    def open_webpage(self, url, web_id=None):
-        print(f"Trying to open: {url}")
-
-        self.driver.set_page_load_timeout(30)
-
+    def open_webpage(self,url,web_id=None):
+        self.driver.get(url)
         try:
-            self.driver.get(url)
-            print("Page loaded successfully")
+            WebDriverWait(self.driver,5).until(EC.presence_of_element_located((By.ID, "dynamic_breadcrumb")))
         except Exception as e:
-            print(f"GET ERROR: {e}")
-            return
-
-        try:
-            WebDriverWait(self.driver, 5).until(
-                EC.presence_of_element_located((By.ID, "dynamic_breadcrumb"))
-            )
-        except Exception:
             pass
 
         if web_id:
             try:
-                WebDriverWait(self.driver, 15).until(
-                    EC.presence_of_element_located((By.ID, web_id))
-                )
+                WebDriverWait(self.driver,15).until(EC.presence_of_element_located((By.ID, web_id)))
             except Exception as e:
                 print(f"Web open Error {e}")
+
         else:
             self.add_delay(5)
-
         self.add_delay(3)
-        print("-" * 100)
+        print("-"*100)
         print(f"Web-page opened: {url}")
 
     def _generate_file_from_table(self,table_html):

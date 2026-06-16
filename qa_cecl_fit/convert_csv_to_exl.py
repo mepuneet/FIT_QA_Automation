@@ -9,7 +9,7 @@ import pandas as pd
 
 def Convert_csv2excel(bank_id):
     # Get the file path (folder containing the CSV files)
-    file_path = CommonPaths.get_skq_path(bank_id)
+    file_path = CommonPaths.get_cecl_path(bank_id)
 
     # Define the output folder for raw Excel files
     raw_excel_folder = os.path.join(file_path, 'raw_excel')

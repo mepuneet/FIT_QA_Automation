@@ -1,11 +1,14 @@
 from .base import CommonUtils,By
+import time
+import os
+import pandas as pd
 from itertools import groupby
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from const import CommonPaths
 from selenium.webdriver.common.action_chains import ActionChains
-
+from openpyxl.utils import get_column_letter
 class NewQAStrategy(CommonUtils):
 
     MAIN_URL = "http://10.2.232.163:3000/"
@@ -45,16 +48,16 @@ class NewQAStrategy(CommonUtils):
     def set_bank(self,bank_id,manual=True):
         self.bank_id = bank_id
 
-        self.file_path = CommonPaths.get_skq_path(bank_id)
-        self.screenshots_path = CommonPaths.get_skq_screenshot_path(bank_id)
+        self.file_path = CommonPaths.get_cecl_path(bank_id)
+        self.raw_file_path = CommonPaths.raw_file_path(bank_id)
 
         self.driver.find_element(By.ID,value='search_institution').send_keys(self.bank_id)
-        self.add_delay(1)
-        if manual:
-            manually_switch = input(f"waiting for user to do the task for bank {bank_id}: ")
-            # select all ticks
-            if manually_switch in ("1","yes"):
-                print("Switched manually")
+        self.add_delay(2)
+
+        bank = WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable(( By.XPATH, f'//a[contains(@class,"clck-bnk") and @bank_code="{self.bank_id}"]')))
+        bank.click()
+        print(f"Bank {self.bank_id} selected successfully.")
+        self.add_delay(10)
 
 
     def _open_report_page_by_id(self,report_page_id):
@@ -134,14 +137,28 @@ class NewQAStrategy(CommonUtils):
     def _get_report_page_id(self,report_page_config):
         return report_page_config[0].get('report_id')
     
-    # def extract_reports(self,config):
-    #     grouped_reports = [list(v) for k,v in groupby(config,key= lambda x: x['report_id'])]
-    #     for rep_pg_config in grouped_reports:
-    #         self.extract_report_page(rep_pg_config)
+    def select_all_metrics(self):
+        try:
+            # 1. Click dropdown
+            WebDriverWait(self.driver, 20).until(EC.element_to_be_clickable((By.CLASS_NAME, "dropdown-link"))).click()
+
+            # 2. Wait for checkbox container
+            WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.ID, "tbl_colmn")))
+
+            # 3. Select all checkboxes
+            checkboxes = self.driver.find_elements(By.CSS_SELECTOR, "#tbl_colmn input[type='checkbox']")
+
+            for cb in checkboxes:
+                if not cb.is_selected():
+                    self.driver.execute_script("arguments[0].click();", cb)
+
+            print("All metrics selected successfully")
+
+        except Exception as e:
+            print(f"Error while selecting metrics: {str(e)}")
 
     def extract_executive_reports(self,config:list):
-
-        # need to select details
+        self.select_all_metrics()
         self.driver.find_element(By.ID,value="group_details-tab").click()
         grouped_assets = [list(v) for k,v in groupby(config,key= lambda x: x['asset_type'])]
         for grouped_asset in grouped_assets:
@@ -229,6 +246,7 @@ class NewQAStrategy(CommonUtils):
         asset_types = ["1", "2", "3"]  # Corresponding to Loans, HTM Securities, Unfunded Commitments
         for asset_type_value in asset_types:
             try:
+                self.add_delay(3)
                 # Wait for the new page to load with the asset type selection options
                 WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "lst_financial_asset_type")))
                 
@@ -262,7 +280,7 @@ class NewQAStrategy(CommonUtils):
 
                         # Extract data from the table using the table ID and optional file name
                         asset_type_name = self.asset_type_mapping.get(asset_type_value, "Unknown Asset Type")
-                        report_name = f"{asset_type_name}-{table_config.get('file_name', '')}"
+                        report_name = f"{table_config.get('file_name', '')}-{asset_type_name}.xlsx"
                         self.extract_data_by_id(table_id, report_name=report_name)
 
                     except Exception as e:
@@ -281,11 +299,11 @@ class NewQAStrategy(CommonUtils):
 
         # Step 2: Click on the 'asset_type_show_hide' to navigate to the asset type selection page
         self.driver.find_element(By.ID, "asset_type_show_hide").click()
-        self.add_delay(10)
         # Step 3: Loop through the asset types and repeat the process for each one
         asset_types = ["1", "2", "3"]  # Corresponding to Loans, HTM Securities, Unfunded Commitments
         for asset_type_value in asset_types:
             try:
+                self.add_delay(3)
                 # Wait for the new page to load with the asset type selection options
                 WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "lst_financial_asset_type")))
                 
@@ -319,7 +337,7 @@ class NewQAStrategy(CommonUtils):
 
                         # Extract data from the table using the table ID and optional file name
                         asset_type_name = self.asset_type_mapping.get(asset_type_value, "Unknown Asset Type")
-                        report_name = f"{asset_type_name}-{table_config.get('file_name', '')}"
+                        report_name = f"{table_config.get('file_name', '')}-{asset_type_name}.xlsx"
                         self.extract_data_by_id(table_id, report_name=report_name)
 
                     except Exception as e:
@@ -331,22 +349,17 @@ class NewQAStrategy(CommonUtils):
             except Exception as e:
                 print(f"Error during asset type selection process for {asset_type_value}: {e}")
 
-    def scroll_page(self):
-        # Scroll down the page in increments until the end of the page is reached
-        last_height = self.driver.execute_script("return document.body.scrollHeight")
-        
-        while True:
-            # Scroll down to the bottom
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            self.add_delay(2)  # Wait for new content to load (adjust delay if needed)
 
-            # Check the new scroll height after waiting for page load
-            new_height = self.driver.execute_script("return document.body.scrollHeight")
-            
-            # Break the loop if no new content is loaded
-            if new_height == last_height:
+    def scroll_table_container(self, container_id, pause=1):
+        container = self.driver.find_element(By.ID, container_id)
+        last_scroll_top = -1
+        while True:
+            self.driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight;",container)
+            time.sleep(pause)
+            new_scroll_top = self.driver.execute_script("return arguments[0].scrollTop;",container)
+            if new_scroll_top == last_scroll_top:
                 break
-            last_height = new_height
+            last_scroll_top = new_scroll_top
 
     def extract_override_data(self, config: list):
         override_page_url = f"{self.MAIN_URL}{self.OVERRIDE_PAGE}"
@@ -357,12 +370,7 @@ class NewQAStrategy(CommonUtils):
                 table_id = table_config.get('html_id', '')
                 report_name = table_config.get('file_name', '')
 
-                # if table_id in ('div_orgnl_val', 'div_ovrride_val'):
-                #     self.add_delay(1)
-                #     manually_switch= input("Have you scrolled data for bank")
-                #     if manually_switch in ("1","yes"):
-                #         print("Switched manually")
-                if report_name == "override-before&after-group.csv":
+                if report_name == "Override-Group.xlsx":
                     dropdown_element = self.driver.find_element(By.ID, "rslt_before_aftr")
                     select = Select(dropdown_element)
                     select.select_by_value("grp")  #
@@ -384,18 +392,10 @@ class NewQAStrategy(CommonUtils):
     def extract_exclude_account_data(self, config: list):
         exclude_page_url = f"{self.MAIN_URL}{self.EXCLUDE_ACC_PAGE}"
         self.open_webpage(exclude_page_url)
-
-        # Scroll through the page to ensure all content is loaded
-        self.scroll_page()
+        self.scroll_table_container("div_excludes_account")
         for table_config in config:
             try:
                 table_id = table_config.get('html_id', '')
-                if table_id in ('excludes_account_colm'):
-                    self.add_delay(1)
-                    # manually_switch= input("Have you scrolled data for bank : ")
-                    # if manually_switch in ("1","yes"):
-                    #     print("Switched manually")
-
                 if not table_id:
                     raise ValueError("Table ID required for extraction")
 
@@ -408,7 +408,7 @@ class NewQAStrategy(CommonUtils):
                 self.extract_data_by_id(table_id, report_name=report_name)
 
             except Exception as e:
-                print(f"Error while extracting adjustment data: {e}")
+                print(f"Error while extracting Exclude account data: {e}")
 
 
     def extract_select_methodology_data(self, config: list):
@@ -448,3 +448,43 @@ class NewQAStrategy(CommonUtils):
         download_button = self.driver.find_element(By.CLASS_NAME, "download_reports")
         download_button.click()
         self.add_delay(500)
+
+
+    def extract_in_single_file(self):
+        output_file = os.path.join(self.raw_file_path, "Combined_Report.xlsx")
+        try:
+            with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+                for i, file in enumerate(os.listdir(self.file_path), start=1):
+                    if file.endswith((".xlsx", ".xls")):
+                        file_path = os.path.join(self.file_path, file)
+                        print(f"Reading: {file_path}")
+                        try:
+                            df = pd.read_excel(file_path, engine="openpyxl")
+                            # Replace Unnamed columns with blank
+                            df.columns = [ "" if str(col).startswith("Unnamed") else col for col in df.columns]
+                            sheet_name = os.path.splitext(file)[0][:29]
+                            # Write dataframe to Excel
+                            df.to_excel(writer, sheet_name=sheet_name, index=False)
+                            worksheet = writer.sheets[sheet_name]
+                            for col_idx, col in enumerate(df.columns, 1):
+                                col_letter = get_column_letter(col_idx)
+                                max_length = len(str(col))
+                                # Check all values in column
+                                for value in df.iloc[:, col_idx - 1]:
+                                    if pd.isna(value):
+                                        continue
+                                    value = str(value)
+                                    # handle multi-line cells
+                                    if "\n" in value:
+                                        value = max(value.split("\n"), key=len)
+                                    max_length = max(max_length, len(value))
+                                # EXTRA BUFFER for better readability
+                                adjusted_width = max_length + 4
+                                # set width
+                                worksheet.column_dimensions[col_letter].width = adjusted_width
+                        except Exception as e:
+                            print(f"Error reading {file}: {e}")
+            print(f"Combined file created successfully: {output_file}")
+
+        except Exception as e:
+            print(f"Error while combining Excel files: {str(e)}")

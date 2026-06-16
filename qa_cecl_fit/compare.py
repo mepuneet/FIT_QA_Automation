@@ -49,7 +49,7 @@ def compare_fitqa_newqa(fit_file,qa_file,bank_no,file_name):
 def compare_by_bank(bank_id):
 	before_after=1
 	fit_path = CommonPaths.get_fit_path(bank_id)
-	skq_path = CommonPaths.get_skq_path(bank_id)
+	skq_path = CommonPaths.get_cecl_path(bank_id)
 	for file_config in ALL_FILES:
 		file_ = file_config.get('file_name')
 		fit_file = f"{fit_path}{file_}"
