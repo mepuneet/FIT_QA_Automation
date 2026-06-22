@@ -16,13 +16,12 @@ class ContextRunner:
         self._extract_executive_summary()
         self._extract_adjustment_data()
         self._extract_override_data()
-        self._extract_exclude_account_data()
+        # self._extract_exclude_account_data()
         self._extract_qfactor_data()
         self._extract_forwordlook_data()
         self._extract_select_methodology_data()
-        # self._extract_reports()
         self._extract_in_single_file()
-
+        self._extract_reports()
 
 
         self.driver.quit()

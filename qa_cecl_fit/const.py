@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+import os
+load_dotenv()
 BANK_ID = "3279"
 ALL_FILES = [
     {"file_name": "Executive-Summery.xlsx","html_id":"summary_tbl","asset_type":"loans"},    
@@ -52,7 +55,7 @@ def validator(all_config):
 # validator(ALL_FILES)
 
 class CommonPaths:
-    RAW_FILE_PATH = "D:/cecl-fit/Excel_file/"
+    RAW_FILE_PATH = os.getenv("RAW_FILE_PATH")
 
     @classmethod
     def get_cecl_path(cls,bank_id):    
