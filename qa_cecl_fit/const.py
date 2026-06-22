@@ -52,7 +52,7 @@ def validator(all_config):
 # validator(ALL_FILES)
 
 class CommonPaths:
-    RAW_FILE_PATH = "C:/Users/Puneet/Documents/Python Project/FIT_QA_Automation/Excel_file/"
+    RAW_FILE_PATH = "D:/cecl-fit/Excel_file/"
 
     @classmethod
     def get_cecl_path(cls,bank_id):    

@@ -10,14 +10,15 @@ from utils import write_file
 from openpyxl.utils import get_column_letter
 import pandas as pd
 import os
+import io
 
 class CommonUtils:
 
     def save_element(self,element,file_name,screen_shot=True,extract_df=False):
 
         try:
-            table_html = element.get_attribute('outerHTML')        
-            df = pd.read_html(table_html)[0]
+            table_html = element.get_attribute('outerHTML')     
+            df = pd.read_html(io.StringIO(table_html), flavor="lxml")[0]
             full_path = os.path.join(self.file_path, file_name)
 
             with pd.ExcelWriter(full_path, engine="openpyxl") as writer:
@@ -49,7 +50,7 @@ class CommonUtils:
             wb.save(full_path)
             print(f"Extracted and formatted: {full_path}")
         except Exception as e:
-            print(f"Error while extracting adjustment data: {e}")
+            print(f"Error while extracting data: {e}")
 
     def extract_data_by_id(self,table_id,report_name='',keep_screenshot=True,extract_as_df=False):
         self.add_delay(10)

@@ -11,7 +11,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from openpyxl.utils import get_column_letter
 class NewQAStrategy(CommonUtils):
 
-    MAIN_URL = "http://10.2.232.163:3000/"
+    MAIN_URL = "http://localhost:5000/"
     EXECUTIVE_OVERVIEW = "pcbb/global/executive-overview/"
     # REPORTING_HOME = "pcbb/global/reporting-home/"
     REPORTING_HOME = "cecl/global/reporting/download/?download_type=excel&asset_type=&effective_date=&effective_date_prior=&expand_page=1"
@@ -24,8 +24,8 @@ class NewQAStrategy(CommonUtils):
     SELECT_METHODOLOGY_PAGE ="cecl/review-setup/configuration/select-methodology/"
     GRAPH_PAGE ="pcbb/global/reporting/page/graph/"
 
-    USER = "puneet_admin"
-    PW = "123456789a#PCBB"
+    USER = "psaini"
+    PW = "Puneetsaini@123456"
 
     asset_type_mapping = {"1": "Loans", "2": "HTM_Securities", "3": "Unfunded_Commitments"}
     
@@ -387,7 +387,7 @@ class NewQAStrategy(CommonUtils):
                 self.extract_data_by_id(table_id, report_name=report_name)
 
             except Exception as e:
-                print(f"Error while extracting adjustment data: {e}")
+                print(f"Error while extracting override data: {e}")
 
     def extract_exclude_account_data(self, config: list):
         exclude_page_url = f"{self.MAIN_URL}{self.EXCLUDE_ACC_PAGE}"
@@ -429,7 +429,7 @@ class NewQAStrategy(CommonUtils):
                 self.extract_data_by_id(table_id, report_name=report_name)
 
             except Exception as e:
-                print(f"Error while extracting adjustment data: {e}")
+                print(f"Error while extracting select methodology data: {e}")
 
     def extract_reports(self, config: list):
         report_page_url = f"{self.MAIN_URL}{self.REPORTING_HOME}"
