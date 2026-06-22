@@ -1,17 +1,23 @@
 from .base import CommonUtils,By
 import time
 import os
+from datetime import datetime
+from dotenv import load_dotenv
 import pandas as pd
 from itertools import groupby
+from datetime import datetime
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from const import CommonPaths
 from selenium.webdriver.common.action_chains import ActionChains
 from openpyxl.utils import get_column_letter
+
+load_dotenv()
+
 class NewQAStrategy(CommonUtils):
 
-    MAIN_URL = "http://localhost:5000/"
+    MAIN_URL = os.getenv("MAIN_URL")
     EXECUTIVE_OVERVIEW = "pcbb/global/executive-overview/"
     # REPORTING_HOME = "pcbb/global/reporting-home/"
     REPORTING_HOME = "cecl/global/reporting/download/?download_type=excel&asset_type=&effective_date=&effective_date_prior=&expand_page=1"
@@ -24,8 +30,8 @@ class NewQAStrategy(CommonUtils):
     SELECT_METHODOLOGY_PAGE ="cecl/review-setup/configuration/select-methodology/"
     GRAPH_PAGE ="pcbb/global/reporting/page/graph/"
 
-    USER = "psaini"
-    PW = "Puneetsaini@123456"
+    USER = os.getenv("USER")
+    PW = os.getenv("PW")
 
     asset_type_mapping = {"1": "Loans", "2": "HTM_Securities", "3": "Unfunded_Commitments"}
     
@@ -216,6 +222,7 @@ class NewQAStrategy(CommonUtils):
     
     def extract_adjustment_data(self, config: list):
         adjustment_page_url = f"{self.MAIN_URL}{self.ADJUSTMENT_PAGE}"
+        breakpoint()
         self.open_webpage(adjustment_page_url)
         # Loop through the config to extract tables or data
         for table_config in config:
@@ -363,6 +370,7 @@ class NewQAStrategy(CommonUtils):
 
     def extract_override_data(self, config: list):
         override_page_url = f"{self.MAIN_URL}{self.OVERRIDE_PAGE}"
+
         self.open_webpage(override_page_url)
         # Loop through the config to extract tables or data
         for table_config in config:
@@ -451,7 +459,8 @@ class NewQAStrategy(CommonUtils):
 
 
     def extract_in_single_file(self):
-        output_file = os.path.join(self.raw_file_path, "Combined_Report.xlsx")
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = os.path.join(self.raw_file_path, f"Combined_Report_{timestamp}.xlsx")
         try:
             with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
                 for i, file in enumerate(os.listdir(self.file_path), start=1):
