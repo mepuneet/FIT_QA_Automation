@@ -222,7 +222,6 @@ class NewQAStrategy(CommonUtils):
     
     def extract_adjustment_data(self, config: list):
         adjustment_page_url = f"{self.MAIN_URL}{self.ADJUSTMENT_PAGE}"
-        breakpoint()
         self.open_webpage(adjustment_page_url)
         # Loop through the config to extract tables or data
         for table_config in config:
