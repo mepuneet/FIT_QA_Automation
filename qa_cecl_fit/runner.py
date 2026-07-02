@@ -16,7 +16,7 @@ class ContextRunner:
         self._extract_executive_summary()
         self._extract_adjustment_data()
         self._extract_override_data()
-        # self._extract_exclude_account_data()
+        self._extract_exclude_account_data()
         self._extract_qfactor_data()
         self._extract_forwordlook_data()
         self._extract_select_methodology_data()
@@ -42,7 +42,7 @@ class ContextRunner:
         self.strategy.extract_forwordlook_data(const.ALL_FORWARDLOOK_FILES)
 
     def _extract_exclude_account_data(self):
-        self.strategy.extract_exclude_account_data(const.ALL_QFACTOR_FILES)
+        self.strategy.extract_exclude_account_data(const.ALL_EXCLUDE_ACC_FILES)
 
     def _extract_select_methodology_data(self):
         self.strategy.extract_select_methodology_data(const.ALL_SELECT_METHOD_FILES)

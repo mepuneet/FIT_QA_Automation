@@ -12,7 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from const import CommonPaths
 from selenium.webdriver.common.action_chains import ActionChains
 from openpyxl.utils import get_column_letter
-
+import traceback
 load_dotenv()
 
 class NewQAStrategy(CommonUtils):
@@ -101,24 +101,26 @@ class NewQAStrategy(CommonUtils):
         except Exception as e:
             print("report page error",str(e))
 
-    def _extract_detailed_report_table(self,table_config,switch_window=True):
+    def _extract_detailed_report_table(self,table_config,group_name, switch_window=True):
         try:
             self.add_delay(1)
             current_window = self.driver.current_window_handle
             parent_table_id = table_config.get('parent_id')
-            # //*[@id="report_tbl_data16_2"]/tbody/tr[1]/td[1]
-            # //*[@id="report_tbl_data"]/tbody/tr[1]/td[1]
+
             try:
-                # first_cell = self.driver.find_element(By.XPATH,f'//*[@id="{parent_table_id}"]/tbody/tr[1]/td[1]')
-                first_cell = self.driver.find_element(By.XPATH,f'//*[@id="{parent_table_id}"]/tbody/tr[1]/td[1]/a')
-                self.highlight(first_cell)
-                first_cell.click()
-                print(f"Clicked on {parent_table_id} -->{first_cell.text}")
+                group_element = self.driver.find_element(By.XPATH,
+                    f'//*[@id="{parent_table_id}"]//div[@class="bank_group_name" and normalize-space()="{group_name}"]'
+                )
+                self.highlight(group_element)
+                group_element.click()
+                print(f"Clicked on {parent_table_id} -->{group_element.text}")
             except Exception as ee:
-                first_cell = self.driver.find_element(By.XPATH,f'//*[@id="{parent_table_id}"]/tbody/tr[1]/td[1]')
-                self.highlight(first_cell)
-                first_cell.click()
-                print(f"Clicked on {parent_table_id} -->{first_cell.text}")
+                group_element = self.driver.find_element(By.XPATH,
+                    f'//*[@id="{parent_table_id}"]//div[@class="bank_group_name" and normalize-space()="{group_name}"]'
+                )
+                self.highlight(group_element)
+                group_element.click()
+                print(f"Clicked on {parent_table_id} -->{group_element.text}")
             # Wait after click
             if switch_window:
                 # what if window is not switched ...?
@@ -165,18 +167,22 @@ class NewQAStrategy(CommonUtils):
 
     def extract_executive_reports(self,config:list):
         self.select_all_metrics()
-        self.driver.find_element(By.ID,value="group_details-tab").click()
-        grouped_assets = [list(v) for k,v in groupby(config,key= lambda x: x['asset_type'])]
+        self.driver.find_element(By.ID, value="group_details-tab").click()
+        group_name = input("Enter Group Name: ").strip()
+        grouped_assets = [list(v) for k, v in groupby(config, key=lambda x: x['asset_type'])]
         for grouped_asset in grouped_assets:
-            asset_type = grouped_asset[0].get('asset_type','loans')
-            #report_asset_type
-            switched = self._select_asset_type(asset_type,options_id="slct_asset_type")
+            asset_type = grouped_asset[0].get('asset_type', 'loans')
+            switched = self._select_asset_type(asset_type, options_id="slct_asset_type")
             if switched:
                 for table_config in grouped_asset:
-                    if not table_config.get('parent_id',''):
+                    if not table_config.get('parent_id', ''):
                         self._extract_table(table_config)
                     else:
-                        self._extract_detailed_report_table(table_config,switch_window=False)
+                        self._extract_detailed_report_table(
+                            table_config,
+                            group_name=group_name,
+                            switch_window=False
+                        )
 
     def _extract_table(self,table_config):
         try:
@@ -399,24 +405,45 @@ class NewQAStrategy(CommonUtils):
     def extract_exclude_account_data(self, config: list):
         exclude_page_url = f"{self.MAIN_URL}{self.EXCLUDE_ACC_PAGE}"
         self.open_webpage(exclude_page_url)
-        self.scroll_table_container("div_excludes_account")
-        for table_config in config:
+        # self.add_delay(5)
+
+        self.driver.find_element(By.ID, "asset_type_show_hide").click()
+        asset_types = ["1", "2"] 
+        for asset_type_value in asset_types:
             try:
-                table_id = table_config.get('html_id', '')
-                if not table_id:
-                    raise ValueError("Table ID required for extraction")
+                self.add_delay(3)
+                WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "lst_financial_asset_type")))
+                dropdown = self.driver.find_element(By.ID, "lst_financial_asset_type")
+                option = dropdown.find_element(By.CSS_SELECTOR, f"option[value='{asset_type_value}']")
+                action = ActionChains(self.driver)
+                action.double_click(option).perform()
+                submit_button = self.driver.find_element(By.ID, "run_document")
+                submit_button.click()
+                WebDriverWait(self.driver, 15).until(EC.presence_of_element_located((By.ID, "dynamic_breadcrumb")))
+                self.add_delay(10)
+                self.scroll_table_container("div_excludes_account")
+                for table_config in config:
+                    try:
+                        table_id = table_config.get('html_id', '')
+                        if not table_id:
+                            raise ValueError("Table ID required for extraction")
 
-                # Wait until the table is present and the loader is invisible
-                WebDriverWait(self.driver, 15).until(EC.presence_of_element_located((By.ID, table_id)))
-                WebDriverWait(self.driver, 10).until(EC.invisibility_of_element_located((By.ID, "loaderInternal")))
+                        # Wait until the table is present and the loader is invisible
+                        WebDriverWait(self.driver, 15).until(EC.presence_of_element_located((By.ID, table_id)))
+                        WebDriverWait(self.driver, 10).until(EC.invisibility_of_element_located((By.ID, "loaderInternal")))
 
-                # Extract data using the table ID and optional file name
-                report_name = table_config.get('file_name', '')
-                self.extract_data_by_id(table_id, report_name=report_name)
+                        # Extract data using the table ID and optional file name
+                        asset_type_name = self.asset_type_mapping.get(asset_type_value, "Unknown Asset Type")
+                        report_name = f"{table_config.get('file_name', '')}-{asset_type_name}.xlsx"
+                        self.extract_data_by_id(table_id, report_name=report_name)
+
+                    except Exception as e:
+                        print(f"Error while extracting Exclude account data: {e}")
+
+                self.driver.find_element(By.ID, "asset_type_show_hide").click()
 
             except Exception as e:
-                print(f"Error while extracting Exclude account data: {e}")
-
+                print(f"Error during asset type selection process for {asset_type_value}: {e}")
 
     def extract_select_methodology_data(self, config: list):
         select_methodolog_page_url = f"{self.MAIN_URL}{self.SELECT_METHODOLOGY_PAGE}"

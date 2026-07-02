@@ -5,10 +5,10 @@ BANK_ID = "3279"
 ALL_FILES = [
     {"file_name": "Executive-Summery.xlsx","html_id":"summary_tbl","asset_type":"loans"},    
     {"file_name": "Executive-GroupLoan.xlsx","html_id":"group_summary_tbl","asset_type":"loans"},
-    # {"file_name": "Executive-GroupLoanDdetail.xlsx","html_id":"tb2hover_data","asset_type":"loans","parent_id":"group_summary_tbl"},
+    {"file_name": "Executive-GroupLoanDetail.xlsx","html_id":"tb2hover_data","asset_type":"loans","parent_id":"group_summary_tbl"},
     
     {"file_name": "Executive-GroupUnfunded.xlsx","html_id":"group_summary_tbl","asset_type":"unfunded"},
-    # {"file_name": "executive-overview-unfunded-detail-1.csv","html_id":"tb2hover_data","asset_type":"unfunded","parent_id":"group_summary_tbl"},
+    {"file_name": "Executive-GroupUnfundedDetail.xlsx","html_id":"tb2hover_data","asset_type":"unfunded","parent_id":"group_summary_tbl"},
     
     {"file_name": "Executive-GroupHTM.xlsx","html_id":"group_summary_tbl","asset_type":"htm"},
     # {"file_name": "executive-overview-htm-detail-1.csv","html_id":"tb2hover_data","asset_type":"htm","parent_id":"group_summary_tbl"},
@@ -25,7 +25,7 @@ ALL_FILES = [
     {"file_name": "Override-Account.xlsx","html_id":"div_before_aftr_accnt_val","asset_type":"loans"},
     {"file_name": "Override-Group.xlsx","html_id":"div_before_aftr_accnt_val","asset_type":"loans"},
 
-    {"file_name": "Exclude-Account.xlsx","html_id":"excludes_account_colm","asset_type":"loans"},
+    {"file_name": "Exclude-Account.xlsx","html_id":"div_excludes_account","asset_type":"loans"},
 
     {"file_name": "Select-Method_Top_Table.xlsx","html_id":"sel_met_colm","asset_type":"loans"},
     {"file_name": "Select-MethodReserveTable.xlsx","html_id":"res_bal_tabl","asset_type":"loans"},
